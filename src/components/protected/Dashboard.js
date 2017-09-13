@@ -30,7 +30,8 @@ export default class Dashboard extends Component {
     teamAvailability: [],
     users: {},
     supervisors: {},
-    teamUsers: {}
+    teamUsers: {},
+    userInfo: {}
   }
 
   onCellClick = this.onCellClick.bind(this);
@@ -50,16 +51,15 @@ export default class Dashboard extends Component {
   }
 
   submitSchedule() {
-      
     let userRef;
     let display = firebase.database().ref('Users/' + this.state.userKey + '/');
+    
     display.update({ display: this.state.slots });
 
     if (this.state.team.length > 0) {
-      userRef = firebase.database().ref(this.state.userKey + '/'); 
+      userRef = firebase.database().ref('Users/' + this.state.userKey + '/'); 
     } 
   
-   
     let slots = Object.keys(this.state.slots);
     let self = this;
     let available = slots.filter(function(slot) {
@@ -80,49 +80,57 @@ export default class Dashboard extends Component {
     
     this.setState({ 
       available: availabilityDays
-    });
-
-     userRef.update({ schedule: availabilityDays });
+    })
+    .then(() => {
+      userRef.update({ schedule: this.state.availabile });
+    })
   }
 
-  componentWillMount() {
 
+  componentWillMount() {
     let users = firebase.database().ref('Users/');
     let supervisors = firebase.database().ref('Supervisors/');
     let self = this;
+    let listUsers;
+    let teamUsers;
+    let count;
+    let hour;
+    let hourMax;
 
-    users.once('value').then((snapshot) => {
-       self.setState({ users: snapshot.val() });
-    });
-
-    supervisors.once('value').then((snapshot) => {
-      self.setState({ supervisors: snapshot.val() });
-    });
-
-    /* find team, userKey, and type of user -- must make sure users are properly read and stored in state */
-    let listUsers = Object.keys(this.state.users);
-   
-    for (let l = 0; l < listUsers.length; l++) {
-
-      let user = listUsers[l];
-      if (this.state.users[user].email === this.state.user) {
+    users.once('value')
+    .then((snapshot) => {
+      self.setState({ users: snapshot.val() });
+    })
+   .then(() => {
+     listUsers = Object.keys(this.state.users);
      
-        this.setState({ team: this.state.users[user].team });
-        this.setState({ type: this.state.users[user].type });  
-        this.setState({ userKey: this.state.users[user].userKey }); 
+     for (let l = 0; l < listUsers.length; l++) {
+      let user = listUsers[l];
+      
+      if (this.state.users[user].email === this.state.user) {   
+        this.setState({ 
+          team: this.state.users[user].team, 
+          type: this.state.users[user].type, 
+          userKey: user,
+          userInfo: this.state.users[user],
+          slots: this.state.users[user].display
+        });
       }
     }
-
-    let teamUsers = firebase.database().ref([this.state.team] +'/');
-    
+   })
+   .then(() => {
+    teamUsers = firebase.database().ref([this.state.team] +'/');
     teamUsers.once('value').then(snapshot => {
       this.setState({ teamUsers: snapshot.val() });
     });
-    
-
-    let count = 0;
-    let hour = 8;
-    let hourMax = 9;
+   })
+   .catch((reason) => {
+     console.log('setting state erred: ', reason);
+   })
+   .then (() => {
+    count = 0;
+    hour = 8;
+    hourMax = 9;
 
     for (let i = 0; i < 9; i++) { 
         hour = hourMax;
@@ -132,18 +140,22 @@ export default class Dashboard extends Component {
         } else {
           hourMax++; 
         }
-          this.state.tilesData.push({ key: i, title: [hour, hourMax] });
-          count++;
+        this.state.tilesData.push({ key: i, title: [hour, hourMax] });
+        count++;
     }
-    /** if user has no availability -- needs to be corrected for display in db**/
-    if (this.state.available.length === 0) {
+    
+    if (Object.keys(this.state.slots) === 0) {
       for (let j = 0; j < 9; j++) {
         for (let k = 0; k < 5; k++) {
           this.state.slots[j+','+k] = [false,"#E59500"];
         }
       }
     } 
+   })
 
+   supervisors.once('value').then((snapshot) => {
+    self.setState({ supervisors: snapshot.val() });
+   }); 
   }
   
   render () {
@@ -161,11 +173,11 @@ export default class Dashboard extends Component {
          {
           this.state.tilesData.map((tile, index) => (
             <TableRow key={index}>
-                <TableRowColumn key={index+','+'0'} style={{color: "#FFFFFF", backgroundColor: this.state.slots[index+','+'0'][1]}} onCellClick={this.onCellClick}>{tile.title[0] + '-' + tile.title[1]}</TableRowColumn> 
-                <TableRowColumn key={index+','+'0'} style={{color: "#FFFFFF", backgroundColor: this.state.slots[index+','+'1'][1]}} onCellClick={this.onCellClick}>{tile.title[0] + '-' + tile.title[1]}</TableRowColumn> 
-                <TableRowColumn key={index+','+'0'} style={{color: "#FFFFFF", backgroundColor: this.state.slots[index+','+'2'][1]}} onCellClick={this.onCellClick}>{tile.title[0] + '-' + tile.title[1]}</TableRowColumn> 
-                <TableRowColumn key={index+','+'0'} style={{color: "#FFFFFF", backgroundColor: this.state.slots[index+','+'3'][1]}} onCellClick={this.onCellClick}>{tile.title[0] + '-' + tile.title[1]}</TableRowColumn> 
-                <TableRowColumn key={index+','+'0'} style={{color: "#FFFFFF", backgroundColor: this.state.slots[index+','+'4'][1]}} onCellClick={this.onCellClick}>{tile.title[0] + '-' + tile.title[1]}</TableRowColumn>        
+                <TableRowColumn key={index+','+'0'} style={{color: "#FFFFFF", backgroundColor: this.state.slots[index+','+'0'][1]}}>{tile.title[0] + '-' + tile.title[1]}</TableRowColumn> 
+                <TableRowColumn key={index+','+'0'} style={{color: "#FFFFFF", backgroundColor: this.state.slots[index+','+'1'][1]}}>{tile.title[0] + '-' + tile.title[1]}</TableRowColumn> 
+                <TableRowColumn key={index+','+'0'} style={{color: "#FFFFFF", backgroundColor: this.state.slots[index+','+'2'][1]}}>{tile.title[0] + '-' + tile.title[1]}</TableRowColumn> 
+                <TableRowColumn key={index+','+'0'} style={{color: "#FFFFFF", backgroundColor: this.state.slots[index+','+'3'][1]}}>{tile.title[0] + '-' + tile.title[1]}</TableRowColumn> 
+                <TableRowColumn key={index+','+'0'} style={{color: "#FFFFFF", backgroundColor: this.state.slots[index+','+'4'][1]}}>{tile.title[0] + '-' + tile.title[1]}</TableRowColumn>        
             </TableRow>
           ))}
         </TableBody>
