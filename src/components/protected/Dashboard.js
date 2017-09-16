@@ -23,7 +23,7 @@ export default class Dashboard extends Component {
     super(props);
     this.state = {
       user: firebase.auth().currentUser.email,
-      userKey: 'randomKey',
+      userKey: '',
       type: '',
       team: '',
       slots: {},
@@ -41,126 +41,81 @@ export default class Dashboard extends Component {
   componentWillMount() {
 
     let users = firebase.database().ref('Users/');
-    let display = firebase.database().ref('Users/' + this.state.userKey + '/display');
-    let self = this;
-    // let listUsers;
-    // let teamUsers;
-    // let count;
-    // let hour;
-    // let hourMax;
+    let display;
+    if(this.state.userKey.length > 0) {
+      display = firebase.database().ref('Users/' + this.state.userKey + '/display');
+      display.on('value', snapshot => {
+        this.setState({ slots: snapshot.val() })
+      })
+    } 
 
     
+    let self = this;
+    let listUsers;
+    let teamUsers;
+    let supervisors = firebase.database().ref('Supervisors/');
 
-    display.on('value', snapshot => {
-      console.log('replace', snapshot.val());
-
-      self.setState({ slots: snapshot.val() })
-  
+    users.on('value', snapshot => {
+      this.setState({ users: snapshot.val() })
     })
+
+    users.once('value')
+    .then((snapshot) => {
+      self.setState({ users: snapshot.val() });
+    })
+   .then(() => {
+
+     listUsers = Object.keys(this.state.users); 
+     for (let l = 0; l < listUsers.length; l++) {
+      let user = listUsers[l];
+      
+      if (this.state.users[user].email === this.state.user) {   
+        this.setState({ 
+          team: this.state.users[user].team, 
+          type: this.state.users[user].type, 
+          userKey: user,
+          userInfo: this.state.users[user]
+        }, function() {
+          self.setState({
+            slots: self.state.users[user].display
+          }) 
+        });
+      }
+    }
+   })
+   .then(() => {
+     if (Object.keys(this.state.slots).length === 0) {
+      for (let j = 0; j < 9; j++) {
+        for (let k = 0; k < 5; k++) {
+          self.state.slots[j+','+k] = [false,"#E59500"];
+        }
+      }
+     }
+   })
+   .then(() => {
+    teamUsers = firebase.database().ref([self.state.team] +'/');
+    teamUsers.once('value').then(snapshot => {
+      this.setState({ teamUsers: snapshot.val() });
+    });
+  })
+   .catch((reason) => {
+    console.log('setting state erred: ', reason);
+   })
+
+   
+
+    supervisors.once('value').then((snapshot) => {
+      this.setState({ supervisors: snapshot.val() });
+    })
+    .catch((e) => {
+      console.log('error', e)
+    });
+       
     
   }
-  //   users.once('value')
-  //   .then((snapshot) => {
-  //     self.setState({ users: snapshot.val() });
-  //   })
-  //   .then(() => {
-
-  //     listUsers = Object.keys(self.state.users);
-      
-  //     for (let l = 0; l < listUsers.length; l++) {
-  //       let user = listUsers[l];
-        
-  //       if (self.state.users[user].email === self.state.user) {   
-  //         self.setState({ 
-  //           team: self.state.users[user].team, 
-  //           type: self.state.users[user].type, 
-  //           userKey: user,
-  //           userInfo: self.state.users[user],
-  //           slots: self.state.users[user].display
-  //         });
-  //       }
-  //     }
-
-  //     if (Object.keys(self.state.slots) === 0) {
-  //       for (let j = 0; j < 9; j++) {
-  //         for (let k = 0; k < 5; k++) {
-  //           self.state.slots[j+','+k] = [false,"#E59500"];
-  //         }
-  //       }
-  //     } 
-  //   })
-  //   .catch( e => {
-  //     console.log('error', e);
-  //   })
-  // }
-
-  // updateStates(data) {
-
-  //   const datum = data.val();
-  //   let users = firebase.database().ref('Users/');
-  //   let supervisors = firebase.database().ref('Supervisors/');
-  //   let display = firebase.database().ref('Users/' + this.state.userKey+ '/');
-  //   let self = this;
-  //   let listUsers;
-  //   let teamUsers;
-  //   let count;
-  //   let hour;
-  //   let hourMax;
   
-  //   // users.once('value')
-  //   // .then((snapshot) => {
-  //   //   self.setState({ users: snapshot.val() });
-  //   // })
-  //   // .then(() => {
-  //     // console.log('datatatata',datum)
-  //     listUsers = Object.keys(datum);
-      
-  //     for (let l = 0; l < listUsers.length; l++) {
-  //       let user = listUsers[l];
-        
-  //       if (self.state.users[user].email === self.state.user) {   
-  //         this.setState({ 
-  //           team: self.state.users[user].team, 
-  //           type: self.state.users[user].type, 
-  //           userKey: user,
-  //           userInfo: self.state.users[user],
-  //           slots: self.state.users[user].display
-  //         });
-  //       }
-  //     }
-  //   // })
-  //   // .then (() => {
-      
-  //     if (Object.keys(self.state.slots) === 0) {
-  //       for (let j = 0; j < 9; j++) {
-  //         for (let k = 0; k < 5; k++) {
-  //           this.state.slots[j+','+k] = [false,"#E59500"];
-  //         }
-  //       }
-  //     } 
-    //  })
-    // .then(() => {
-      // teamUsers = firebase.database().ref([self.state.team] +'/');
-      // teamUsers.once('value').then(snapshot => {
-      //   this.setState({ teamUsers: snapshot.val() });
-      // });
-    // })
-    // .catch((reason) => {
-    //   console.log('setting state erred: ', reason);
-    // })
-   
-  //  supervisors.once('value').then((snapshot) => {
-  //   self.setState({ supervisors: snapshot.val() });
-  //  })
-  //  .catch((e) => {
-  //   console.log('error', e)
-  //  });
-   
-  // }
-
 
   onCellClick(row,col) {
-    console.log(this.state.slots);
 
     let newBusy = _.extend({}, this.state.slots);
     let display = firebase.database().ref('Users/' + this.state.userKey +'/');
@@ -168,15 +123,14 @@ export default class Dashboard extends Component {
 
     if (this.state.slots[row+','+col][0] === false) {
       newBusy[row+','+col] = [true,"#840032"];
-      
-      display.set({ display: newBusy })
+      display.update({ display: newBusy })
       .then(() => {
         this.setState({ slots: newBusy });
       })
       
     } else {
       newBusy[row+','+col] = [false,"#E59500"];
-      display.set({ display: newBusy })
+      display.update({ display: newBusy })
       .then(() => {
         this.setState({ slots: newBusy });
       })
@@ -188,7 +142,6 @@ export default class Dashboard extends Component {
     let thing;
     if (Object.keys(this.state.slots).length > 0) {
       thing =  tilesData.map((tile, index) => (
-      
       
         <TableRow key={index}>
             <TableRowColumn key={index+',0'} style={{color: "#FFFFFF", backgroundColor: this.state.slots[index+','+'0'][1]}}>{tile.title[0] + '-' + tile.title[1] }</TableRowColumn> 
