@@ -40,16 +40,18 @@ export default class Dashboard extends Component {
 
   componentWillMount() {
 
-    let users = firebase.database().ref('Users/');
     let display;
+    let userRef;
+    let users = firebase.database().ref('Users/');
+
     if(this.state.userKey.length > 0) {
       display = firebase.database().ref('Users/' + this.state.userKey + '/display');
+      userRef = firebase.database().ref('Users/' + this.state.userKey + '/'); 
       display.on('value', snapshot => {
         this.setState({ slots: snapshot.val() })
       })
     } 
 
-    
     let self = this;
     let listUsers;
     let teamUsers;
@@ -102,20 +104,22 @@ export default class Dashboard extends Component {
     console.log('setting state erred: ', reason);
    })
 
-   
-
     supervisors.once('value').then((snapshot) => {
       this.setState({ supervisors: snapshot.val() });
     })
     .catch((e) => {
       console.log('error', e)
     });
-       
+
     
   }
-  
 
   onCellClick(row,col) {
+    let userRef;
+
+    if(this.state.userKey.length > 0) {
+      userRef = firebase.database().ref('Users/' + this.state.userKey + '/'); 
+    } 
 
     let newBusy = _.extend({}, this.state.slots);
     let display = firebase.database().ref('Users/' + this.state.userKey +'/');
@@ -126,8 +130,7 @@ export default class Dashboard extends Component {
       display.update({ display: newBusy })
       .then(() => {
         this.setState({ slots: newBusy });
-      })
-      
+      })  
     } else {
       newBusy[row+','+col] = [false,"#E59500"];
       display.update({ display: newBusy })
@@ -135,14 +138,38 @@ export default class Dashboard extends Component {
         this.setState({ slots: newBusy });
       })
     } 
+    
+    let slots = Object.keys(this.state.slots);
+
+    let available = slots.filter(function(slot) {
+      return self.state.slots[slot][0] === false; 
+    });
+
+    let availabilityDays = [];
+    
+    for (let m = 0; m < 5; m++) {
+      let timeslotsDay = new Array(9);
+      availabilityDays.push(timeslotsDay);
+    }
+
+    for (let n = 0; n < available.length; n++) {
+      let day = available[n].slice(2);
+      availabilityDays[day][available[n][0]] = available[n][0];
+    }
+    
+    this.setState({ 
+      available: availabilityDays
+    }, function() {
+        if (this.state.availabile) {
+          userRef.update({ schedule: availabilityDays });
+        }
+    })
   }
 
-  
   render () {
-    let thing;
+    let table;
     if (Object.keys(this.state.slots).length > 0) {
-      thing =  tilesData.map((tile, index) => (
-      
+      table =  tilesData.map((tile, index) => ( 
         <TableRow key={index}>
             <TableRowColumn key={index+',0'} style={{color: "#FFFFFF", backgroundColor: this.state.slots[index+','+'0'][1]}}>{tile.title[0] + '-' + tile.title[1] }</TableRowColumn> 
             <TableRowColumn key={index+',1'} style={{color: "#FFFFFF", backgroundColor: this.state.slots[index+','+'1'][1]}}>{tile.title[0] + '-' + tile.title[1]}</TableRowColumn> 
@@ -150,10 +177,9 @@ export default class Dashboard extends Component {
             <TableRowColumn key={index+',3'} style={{color: "#FFFFFF", backgroundColor: this.state.slots[index+','+'3'][1]}}>{tile.title[0] + '-' + tile.title[1]}</TableRowColumn> 
             <TableRowColumn key={index+',4'} style={{color: "#FFFFFF", backgroundColor: this.state.slots[index+','+'4'][1]}}>{tile.title[0] + '-' + tile.title[1]}</TableRowColumn>        
         </TableRow>
-        
       ))
     } else {
-      thing = 'not working'
+      table = 'not working'
     }
     return (
       <div>
@@ -167,12 +193,11 @@ export default class Dashboard extends Component {
       </TableHeader>
       <TableBody displayRowCheckbox={false}>
          {
-          thing
+          table
           }
           </TableBody>
       </Table>
-      </div>
-     
+      </div> 
     )
   }
 }
