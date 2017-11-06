@@ -168,7 +168,6 @@ export default class Dashboard extends Component {
             }, function() {
                 if (userRef) {
                   userRef.update({ schedule: availabilityDays });
-                  console.log('av', this.state.available);
                 }
             })
           })
@@ -196,25 +195,49 @@ export default class Dashboard extends Component {
 
     if(Object.keys(this.state.available).length > 0) {
 
+      const mergeRange = (range) => {
+
+        let merged = [range[0]];
+        for(let i = 1; i < range.length; i++) {
+          let last = merged[merged.length - 1];
+          if(last[1] === range[i][0]) {
+            last[1] = range[i][1];
+          } else {
+            merged.push(range[i]);
+          }
+        }
+        return merged;
+      }
+
       schedule = Object.keys(this.state.available).map((date, index) => {
         let timeSlot = this.state.available[date];
         let time = '';
+        let range = [];
+        let loaded = false;
         
-        for (let i = 0; i < timeSlot.length; i++) {
+        for (let i = 0; i < timeSlot.length; i++) { 
+          let last = range[range.length - 1];  
+          let slot = tilesData[timeSlot[i]];    
 
-          if(timeSlot[i] !== undefined) {
-            let slot = tilesData[timeSlot[i]];
-
-            if (i !== timeSlot.length - 1) {
-              time += slot.title[0] + '-' + slot.title[1]+ ', ';
-            } else {
-              time += slot.title[0] + '-' + slot.title[1];
+            if(timeSlot[i] !== undefined && !loaded) {
+              range.push([slot.title[0], slot.title[1]]);
+              if(i === timeSlot.length - 1) {
+                loaded = true;
+              }
+            } else if(loaded && last[1] < timeSlot[i][0]) {
+              range.push([slot.title[0], slot.title[1]]);
             }
+        }
+      
+        range = mergeRange(range);
+        
+        if (range.length > 0) {
+          for (let j = 0; j < range.length; j++) {
+            time += range[j][0] + '-' + range[j][1] + ',';
           }
         }
 
       return <div>{days[date] + ': ' + time}</div>;
-
       })
     } 
 
