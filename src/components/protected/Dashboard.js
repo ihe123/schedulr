@@ -132,7 +132,8 @@ export default class Dashboard extends Component {
 
     let newBusy = _.extend({}, this.state.slots);
     let display = firebase.database().ref('Users/' + this.state.userKey +'/');
-    let self = this;   
+    let self = this;  
+  
     
     if (Object.keys(this.state.slots).length > 2) {
 
@@ -150,11 +151,11 @@ export default class Dashboard extends Component {
               return self.state.slots[slot][0] === false; 
             });
         
-            let availabilityDays = [];
-            
+            let availabilityDays = {};
+
             for (let m = 0; m < 5; m++) {
               let timeslotsDay = new Array(9);
-              availabilityDays.push(timeslotsDay);
+              availabilityDays[m] = timeslotsDay;
             }
         
             for (let n = 0; n < available.length; n++) {
@@ -167,6 +168,7 @@ export default class Dashboard extends Component {
             }, function() {
                 if (userRef) {
                   userRef.update({ schedule: availabilityDays });
+                  console.log('av', this.state.available);
                 }
             })
           })
@@ -176,19 +178,46 @@ export default class Dashboard extends Component {
 
   render () {
     let table;
+    let schedule;
     if (Object.keys(this.state.slots).length > 5) {
       table =  tilesData.map((tile, index) => ( 
         <TableRow key={index}>
-            <TableRowColumn key={index+',0'} style={{color: "#FFFFFF", backgroundColor: this.state.slots[index+','+'0'][1]}}>{tile.title[0] + '-' + tile.title[1] }</TableRowColumn> 
+            <TableRowColumn key={index+',0'} style={{color: "#FFFFFF", backgroundColor: this.state.slots[index+','+'0'][1]}}>{tile.title[0] + '-' + tile.title[1]}</TableRowColumn> 
             <TableRowColumn key={index+',1'} style={{color: "#FFFFFF", backgroundColor: this.state.slots[index+','+'1'][1]}}>{tile.title[0] + '-' + tile.title[1]}</TableRowColumn> 
             <TableRowColumn key={index+',2'} style={{color: "#FFFFFF", backgroundColor: this.state.slots[index+','+'2'][1]}}>{tile.title[0] + '-' + tile.title[1]}</TableRowColumn> 
             <TableRowColumn key={index+',3'} style={{color: "#FFFFFF", backgroundColor: this.state.slots[index+','+'3'][1]}}>{tile.title[0] + '-' + tile.title[1]}</TableRowColumn> 
             <TableRowColumn key={index+',4'} style={{color: "#FFFFFF", backgroundColor: this.state.slots[index+','+'4'][1]}}>{tile.title[0] + '-' + tile.title[1]}</TableRowColumn>        
         </TableRow>
-      ))
+      ));
+
     } else {
-      table = 'not rendering'
+      table = 'not rendering';
     }
+
+    if(Object.keys(this.state.available).length > 0) {
+
+      schedule = Object.keys(this.state.available).map((date, index) => {
+        let timeSlot = this.state.available[date];
+        let time = '';
+        
+        for (let i = 0; i < timeSlot.length; i++) {
+
+          if(timeSlot[i] !== undefined) {
+            let slot = tilesData[timeSlot[i]];
+
+            if (i !== timeSlot.length - 1) {
+              time += slot.title[0] + '-' + slot.title[1]+ ', ';
+            } else {
+              time += slot.title[0] + '-' + slot.title[1];
+            }
+          }
+        }
+
+      return <div>{days[date] + ': ' + time}</div>;
+
+      })
+    } 
+
     return (
       <div>
       <Table selectable={false} onCellClick={this.onCellClick}>
@@ -204,8 +233,11 @@ export default class Dashboard extends Component {
           table
           }
           </TableBody>
-      </Table>
+      </Table>   
+          Own Availability: {schedule}
+          
       </div> 
+
     )
   }
 }
