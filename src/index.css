@@ -7,3 +7,7 @@ body {
 .submitSchedule {
   margin: 25px;
 }
+
+.availabilities {
+  display: flex;
+}

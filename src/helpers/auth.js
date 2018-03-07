@@ -18,10 +18,19 @@ export function resetPassword (email) {
 }
 
 export function saveUser (user) {
-  return ref.child(`users/${user.uid}/info`)
+  //need to change the semester
+  return ref.child(`Spring2018/Users/${user.uid}/`)
     .set({
       email: user.email,
-      uid: user.uid
+      uid: user.uid,
+      type: 'student'
     })
     .then(() => user)
+  // return ref.child(`Supervisors/User/${user.uid}/`)
+  //   .set({
+  //     email: user.email,
+  //     uid: user.uid,
+  //     type: 'supervisor'
+  //   })
+  //   .then(() => user)
 }
