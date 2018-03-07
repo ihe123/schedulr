@@ -112,6 +112,7 @@ export default class Dashboard extends Component {
   }
 
   mergeRange(range) {
+    console.log('mererasdfasdf', range);
     let merged = [range[0]];
     for(let i = 1; i < range.length; i++) {
       let last = merged[merged.length - 1];
@@ -125,7 +126,9 @@ export default class Dashboard extends Component {
   }
 
   findOverlap(teamSchedules)  {
-    let overlaps = teamSchedules.slice()[0];
+    console.log('team sced', teamSchedules);
+    let overlaps = teamSchedules.slice();
+    overlaps = overlaps[0];
     let overlapObject = {};
 
     if(teamSchedules && overlaps) {
@@ -133,18 +136,22 @@ export default class Dashboard extends Component {
         let teamMember = teamSchedules[i];
 
         for(let j = 0; j < 5; j++) {
+          if(!overlaps[j]) {
+            continue;
+          }
           for(let k = 0; k < 9; k++) {
-        
-            if(teamMember[i] === undefined) {
+            if(teamMember === undefined) {
               overlaps.push([]);
               continue;
             }
+
             if(teamMember[j]) {
-              if(teamMember[j][k] === undefined || !teamMember[i]) {
-                overlaps[j][k] = undefined;
+              if(teamMember[j][k] === undefined) {
+                delete overlaps[j][k];
               }
-            } else {
-              overlaps[j] = [undefined];
+            } 
+            else {
+              delete overlaps[j];
             }
           }
         }
@@ -152,17 +159,21 @@ export default class Dashboard extends Component {
 
       for(let i = 0; i < overlaps.length; i++) {
         overlapObject[i] = [];
+        if(!overlaps[i]) {
+          continue;
+        }
         for(let j = 0; j  < overlaps[i].length; j++) {
           overlapObject[i].push(overlaps[i][j]);
         }
       }
+      console.log('overlap', overlapObject);
       return overlapObject;
     }
   }
 
   changeSlotsToRanges(scheduleObject, tilesData, mergeRange, days) {                
     let ownSched= {};
-
+    console.log('scheduleObject', scheduleObject);
     return Object.keys(scheduleObject).map((date, index) => {
       let timeSlot = scheduleObject[date];
       let time = '';
@@ -172,7 +183,7 @@ export default class Dashboard extends Component {
       for (let i = 0; i < timeSlot.length; i++) { 
         let last = range[range.length - 1];  
         let slot = tilesData[timeSlot[i]];    
-          if(timeSlot[i] !== undefined && !loaded) {
+          if(timeSlot[i] !== undefined && timeSlot[i] !== null && !loaded) {
             range.push([slot.title[0], slot.title[1]]);
             if(i === timeSlot.length - 1) {
               loaded = true;
@@ -209,209 +220,179 @@ export default class Dashboard extends Component {
      this.setState({
        supervisors: snapshot.val()
      }, () => {
-       users.on('value', snapshot => {
+         users.on('value', snapshot => {
          this.setState({ users: snapshot.val() }, () => {
-         let display;
-         let userRef;
-         let self = this;
-         let listUsers;
-         let listSupervisorUsers;
-         let teamUsers;
-         let freshDisplay = {};
+          let display;
+          let userRef;
+          let self = this;
+          let listUsers;
+          let listSupervisorUsers;
+          let teamUsers;
+          let freshDisplay = {};
 
-         /* insert supervisor email address */
+          /* insert supervisor email address */
 
-         if(this.state.user === "wkell@berkeley.edu") {
-          listSupervisorUsers = Object.keys(this.state.supervisors);
-          } 
-  
-          listUsers = Object.keys(this.state.users);
-          
-          for (let l = 0; l < listUsers.length; l++) {
-            let user = listUsers[l];
-            if (this.state.users[user].email === this.state.user) {   
-              
-            this.setState({
-              team: this.state.users[user].team, 
-              type: this.state.users[user].type, 
-              userKey: user,
-              userInfo: this.state.users[user]
-            }, function() {
-             let displaySlots = this.displaySlotsForStudentOrSupervisor(self, user);
-   
-             self.setState({
-               slots: displaySlots 
-             }, () => { 
-               if(this.state.userKey.length > 0 && this.state.type === 'student') {
-                 userRef = firebase.database().ref('Spring2018/Users/' + this.state.userKey + '/'); 
-               } else if(this.state.userKey.length > 0 && this.state.type === 'supervisor') {
-                 userRef = firebase.database().ref('Supervisors/User/' + this.state.userKey + '/'); 
-                 console.log('where are my users?');
-               }
-               if (Object.keys(this.state.slots) && Object.keys(this.state.slots).length < 3 ) {
-                   this.showNewDisplay(userRef); 
-               }
-               this.createAvailability(self); 
-             }) 
-             
-             if(this.state.userKey.length > 0) {
-               let userRef;
-               let display;
-               console.log('state after this.state.userkey.length > 0', this.state);
-               display = firebase.database().ref('Spring2018/Users/' + this.state.userKey + '/display');
-               userRef = firebase.database().ref('Spring2018/Users/' + this.state.userKey + '/'); 
-               display.on('value', snapshot => {
-                 this.setState({ slots: snapshot.val() })
-               })
-             }
-   
-            let newTeamUsers = [];
-            let teamSchedules = [];
-            let teamAndSupervisorSchedules = [];
-            let overlappedWithSupervisorYetToRange;
-            let overlapedYetToRange;
+          if(this.state.user === "wkell@berkeley.edu") {
+            listSupervisorUsers = Object.keys(this.state.supervisors);
+            } 
     
-            for(let l = 0; l < listUsers.length; l++) {
+            listUsers = Object.keys(this.state.users);
+            
+            for (let l = 0; l < listUsers.length; l++) {
               let user = listUsers[l];
-            
-              if(this.state.users[user].team === this.state.team) {
-                newTeamUsers.push(user);
-                teamSchedules.push(this.state.users[user].schedule);
-            
-              }
-            }
-    
-            this.setState({
-              totalScheds: teamSchedules
-            })
-            //for if there's more than one supervisor and you want to choose which one
-            // for(let j = 0; j < listSupervisorUsers.length; j++) {
-            //   let supervisor = listSupervisorUsers[j];
-            // }
-        
-            teamAndSupervisorSchedules.push(...teamSchedules);
-
-            supervisors.once('value')
-            .then((snapshot) => {
-              this.setState({ supervisors: snapshot.val() }, 
-            
-              () => {    
-                let objectUser;
-                let listUsers; 
-                if(this.state.user === 'yoohoo@gmail.com') {
-                  listUsers = Object.keys(this.state.supervisors)
-                  objectUser = this.state.supervisors;
-                } else {
-                  listUsers = Object.keys(this.state.users);
-                  objectUser = this.state.users;
+              if (this.state.users[user].email === this.state.user) {   
+                
+              this.setState({
+                team: this.state.users[user].team, 
+                type: this.state.users[user].type, 
+                userKey: user,
+                userInfo: this.state.users[user]
+              }, function() {
+                let displaySlots = this.displaySlotsForStudentOrSupervisor(self, user);
+      
+                self.setState({
+                  slots: displaySlots 
+                }, () => { 
+                  if(this.state.userKey.length > 0 && this.state.type === 'student') {
+                    userRef = firebase.database().ref('Spring2018/Users/' + this.state.userKey + '/'); 
+                  } else if(this.state.userKey.length > 0 && this.state.type === 'supervisor') {
+                    userRef = firebase.database().ref('Supervisors/User/' + this.state.userKey + '/'); 
+                    
+                  }
+                  if (Object.keys(this.state.slots) && Object.keys(this.state.slots).length < 3 ) {
+                      this.showNewDisplay(userRef); 
+                  }
+                  this.createAvailability(self); 
+                }) 
+                
+                if(this.state.userKey.length > 0) {
+                  let userRef;
+                  let display;
+                  console.log('state after this.state.userkey.length > 0', this.state);
+                  display = firebase.database().ref('Spring2018/Users/' + this.state.userKey + '/display');
+                  userRef = firebase.database().ref('Spring2018/Users/' + this.state.userKey + '/'); 
+                  display.on('value', snapshot => {
+                    this.setState({ slots: snapshot.val() })
+                  })
                 }
-    
-              
-                for (let l = 0; l < listUsers.length; l++) {
+      
+                let newTeamUsers = [];
+                let teamSchedules = [];
+                let teamAndSupervisorSchedules = [];
+                let overlappedWithSupervisorYetToRange;
+                let overlapedYetToRange;
+        
+                for(let l = 0; l < listUsers.length; l++) {
                   let user = listUsers[l];
-              
-                  if (objectUser[user].email === this.state.user){ 
-                    this.setState({
-                      team: objectUser[user].team, 
-                      type: objectUser[user].type, 
-                      supervisorSchedule: this.state.supervisors.cndRfJhA9sO4NDnLYHgBhqNu57i2.schedule,
-                      userKey: user
-                    }, function() {
-                        let displaySlots;
-                      
-                        if(this.state.type === 'supervisor') {
-                          console.log('expect display property', self.state.supervisors[user]);
-                          displaySlots = self.state.supervisors[user].display;
-                        } else {
-                          displaySlots = self.state.users[user].display;
-                        }
+                  if(this.state.users[user].team === this.state.team) {
+                    newTeamUsers.push(user);
+                    teamSchedules.push(this.state.users[user].schedule);
+                  }
+                }
         
-                          self.setState({
-                            slots: displaySlots,
-                            
-                          }, 
-                          () => { //KX: in componentWillMount, need to set state for 'available'
-        
-                            if (Object.keys(this.state.slots).length < 3) {
-                              this.showNewDisplay(userRef); 
-                            }
-                            this.createAvailability(self);
-                            }
-                          )
+                this.setState({
+                  totalScheds: teamSchedules
+                })
+            
+                teamAndSupervisorSchedules.push(...teamSchedules);
 
-                          teamAndSupervisorSchedules.push(this.state.supervisorSchedule);
-                        
-                          this.setState({
-                            teamUsers: newTeamUsers,
-                            totalSchedsWithSupervisor: teamAndSupervisorSchedules
-                          }, () => {
-                            /*********************************TEAM users callback ******************************************* */
+                supervisors.once('value')
+                  .then((snapshot) => {
+                    this.setState({ supervisors: snapshot.val() }, 
                   
-                            if(this.state.totalScheds.length > 0) {
-                              let totalScheds = this.state.totalScheds.slice();
-                              overlapedYetToRange = this.findOverlap(totalScheds);
-                              let totalSchedsWithSupervisor = this.state.totalSchedsWithSupervisor.slice();
-                              overlappedWithSupervisorYetToRange = this.findOverlap(totalSchedsWithSupervisor);
-                            }
-                        
-                            this.setState({
-                              overlapObject: overlapedYetToRange,
-                              overlapWithSupervisorObject: overlappedWithSupervisorYetToRange
-                            }, () => {
-                              let schedule;
-                              let idealTimeSlotsInRange;
-                              if(Object.keys(this.state.available).length > 0) { 
-                          
-                                let available = {...this.state.available};
-                                let overlapObject = {...this.state.overlapObject};
-                                let overlapWithSupervisorObject = {...this.state.overlapWithSupervisorObject};
-                                schedule = this.changeSlotsToRanges(available, tilesData, this.mergeRange, days);
-                                let idealTimeSlotsInRange = this.changeSlotsToRanges(overlapObject, tilesData, this.mergeRange, days);
-                                let idealTimeSlotsWithSupervisor = this.changeSlotsToRanges(overlapWithSupervisorObject, tilesData, this.mergeRange, days);
+                      () => {    
+                        let objectUser;
+                        let listUsers; 
+                        if(this.state.user === 'yoohoo@gmail.com') {
+                          listUsers = Object.keys(this.state.supervisors)
+                          objectUser = this.state.supervisors;
+                        } else {
+                          listUsers = Object.keys(this.state.users);
+                          objectUser = this.state.users;
+                        }
                       
-                                this.setState({
-                                  ownSchedule: schedule,
-                                  teamOverlappings: idealTimeSlotsInRange,
-                                  teamAndSupervisorOverlappings: idealTimeSlotsWithSupervisor
-                                }) 
-                              }
-                              })
-                          });            
-                      });
-                  }  
-                }   
-            }    
-          );
-        })
-              
+                        for (let l = 0; l < listUsers.length; l++) {
+                          let user = listUsers[l];
+                      
+                          if (objectUser[user].email === this.state.user){ 
+                            this.setState({
+                              team: objectUser[user].team, 
+                              type: objectUser[user].type, 
+                              supervisorSchedule: this.state.supervisors.cndRfJhA9sO4NDnLYHgBhqNu57i2.schedule,
+                              userKey: user
+                            }, function() {
+                                let displaySlots;
+                              
+                                if(this.state.type === 'supervisor') {
+                                  console.log('expect display property', self.state.supervisors[user]);
+                                  displaySlots = self.state.supervisors[user].display;
+                                } else {
+                                  displaySlots = self.state.users[user].display;
+                                }
+                
+                                  self.setState({
+                                    slots: displaySlots,
+                                    
+                                  }, () => { 
     
-    
-    
-    
-    
-    
-    
-    
-    
-    
-              });
-            }  
-          }
-    
-    
-    
-    
-    
-    
-    
-    
-          })
-    
-        })
+                                    if (Object.keys(this.state.slots).length < 3) {
+                                      this.showNewDisplay(userRef); 
+                                    }
+                                    this.createAvailability(self);
+                                    }
+                                  )
 
-     }) 
+                                  teamAndSupervisorSchedules.push(this.state.supervisorSchedule);
+                                
+                                  this.setState({
+                                    teamUsers: newTeamUsers,
+                                    totalSchedsWithSupervisor: teamAndSupervisorSchedules
+                                  }, () => {
+                                    /*********************************TEAM users callback ******************************************* */
+                          
+                                    if(this.state.totalScheds.length > 0) {
+                                      let totalScheds = this.state.totalScheds.slice();
+                                      overlapedYetToRange = this.findOverlap(totalScheds);
+                                      let totalSchedsWithSupervisorVar = this.state.totalSchedsWithSupervisor.slice();
+                                      overlappedWithSupervisorYetToRange = this.findOverlap(totalSchedsWithSupervisorVar);
+                                    }
+                                
+                                    this.setState({
+                                      overlapObject: overlapedYetToRange,
+                                      overlapWithSupervisorObject: overlappedWithSupervisorYetToRange
+                                    }, () => {
+                                      let schedule;
+                                      let idealTimeSlotsInRange;
+                                      if(Object.keys(this.state.available).length > 0) { 
+                                        let available = JSON.parse(JSON.stringify(this.state.available));
+                                        let overlapObjectVar = JSON.parse(JSON.stringify(this.state.overlapObject));
+                                        let overlapWithSupervisorObject = JSON.parse(JSON.stringify( this.state.overlapWithSupervisorObject));
+                                        schedule = this.changeSlotsToRanges(available, tilesData, this.mergeRange, days);
+                                        let idealTimeSlotsInRange = this.changeSlotsToRanges(overlapObjectVar, tilesData, this.mergeRange, days);
+                                        let idealTimeSlotsWithSupervisor = this.changeSlotsToRanges(overlapWithSupervisorObject, tilesData, this.mergeRange, days);
+                              
+                                        this.setState({
+                                          ownSchedule: schedule,
+                                          teamOverlappings: idealTimeSlotsInRange,
+                                          teamAndSupervisorOverlappings: idealTimeSlotsWithSupervisor
+                                        }) 
+                                      }
+                                    })
+                                  });            
+                              });
+                          }  
+                        }   
+                      }    
+                    );
+                  })
+                });
+              }  
+            }
+        })
+      })
+    }) 
   })
-  }
+}
 
   onCellClick(row,col) {
     let userRef;
@@ -447,7 +428,7 @@ export default class Dashboard extends Component {
         })        
     }
 
-    let available = {...this.state.available};
+    let available = JSON.parse(JSON.stringify(this.state.available));
     let schedule =  this.changeSlotsToRanges(available, tilesData, this.mergeRange, days);
     
     this.setState({
